@@ -316,7 +316,7 @@ class AI_bird(pygame.sprite.Sprite):
         for i in range(len(self.game.top_pipes_group.sprites())):
             if self.game.top_pipes_group.sprites()[i].passed==False:
                 input= np.array(
-                    [self.vel/(10 * self.game.time_scale),
+                    [self.vel/(20 * self.game.time_scale),
                      (self.game.top_pipes_group.sprites()[i].rect.centerx - self.rect.centerx) / Pipe_born_interval,
                      ( self.game.top_pipes_group.sprites()[i].rect.centery -self.rect.centery) / height,
                      ( self.rect.centery-self.game.bot_pipes_group.sprites()[i].rect.centery) / height])
