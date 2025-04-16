@@ -14,6 +14,7 @@ import numpy as np
 import time
 import copy
 from hmmlearn import hmm
+import sys
 
 #--------------basic setting--------------------------
 
@@ -42,7 +43,18 @@ RED=(255,0,0)
 GRAY=(128,128,128)
 #-----------------------font---------------------------
 
-font_name= os.path.join("simusun.ttc")
+# Create a function to get the correct resource path when using PyInstaller
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
+
+font_name = resource_path("simusun.ttc")
 
 #------------------------------------------------------
 
@@ -512,16 +524,16 @@ class Game():
         self.vs_ai_button = Button(button_x, (height/4) + 260, button_width, button_height, "Player vs AI Mode", 30)
 
     def music_init(self,snd_dir):
-        self.BGM=pygame.mixer.music.load(os.path.join(snd_dir,'game_music.wav'))
-        self.GameOverSound = pygame.mixer.Sound(os.path.join(snd_dir, 'game_over.wav'))
+        self.BGM=pygame.mixer.music.load(resource_path(os.path.join(snd_dir,'game_music.wav')))
+        self.GameOverSound = pygame.mixer.Sound(resource_path(os.path.join(snd_dir, 'game_over.wav')))
 
 
     def img_init(self,img_dir):
-        self.pipe_img = pygame.transform.scale2x(pygame.image.load(os.path.join(img_dir, "pipe.png")).convert_alpha())
-        self.bg_img = pygame.transform.scale(pygame.image.load(os.path.join(img_dir, "bg.png")).convert_alpha(), (600, 900))
-        self.bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join(img_dir, "bird" + str(x) + ".png"))) for x in range(1, 4)]
-        self.bird_images_AI = [pygame.transform.scale2x(pygame.image.load(os.path.join(img_dir, "bird" + str(x) + ".png"))) for x in range(1, 4)]
-        self.base_img = pygame.transform.scale(pygame.image.load(os.path.join(img_dir, "base.png")).convert_alpha(),(2*width,300))
+        self.pipe_img = pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join(img_dir, "pipe.png"))).convert_alpha())
+        self.bg_img = pygame.transform.scale(pygame.image.load(resource_path(os.path.join(img_dir, "bg.png"))).convert_alpha(), (600, 900))
+        self.bird_images = [pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join(img_dir, "bird" + str(x) + ".png")))) for x in range(1, 4)]
+        self.bird_images_AI = [pygame.transform.scale2x(pygame.image.load(resource_path(os.path.join(img_dir, "bird" + str(x) + ".png")))) for x in range(1, 4)]
+        self.base_img = pygame.transform.scale(pygame.image.load(resource_path(os.path.join(img_dir, "base.png"))).convert_alpha(),(2*width,300))
 
     # def loaddata(self):
     #     game_folder = os.path.dirname(__file__)
@@ -557,10 +569,25 @@ class Game():
             # Set to fastest speed for training
             self.time_scale_index = len(self.time_scale_list) - 1  # Set to maximum speed (8x)
             self.time_scale = self.time_scale_list[self.time_scale_index]
+            
+            # Create birds first
             for i in range(self.AI_birds_num):
                 AI_bird(self, self.Born_location[0], self.Born_location[0])
-                if len(self.model_list)>0:
-                    self.AI_bird_group.sprites()[-1].AI_NN = self.model_list[i]
+            
+            # Then assign models safely
+            if len(self.model_list) > 0:
+                model_count = len(self.model_list)
+                for i, bird in enumerate(self.AI_bird_group.sprites()):
+                    if i < model_count:
+                        bird.AI_NN = self.model_list[i]
+                    else:
+                        # For birds without models, either use the best model or leave as default
+                        if model_count > 0:
+                            # Copy the best model (assumed to be the last one)
+                            bird.AI_NN = copy.deepcopy(self.model_list[-1])
+                            # Add some variation
+                            bird.AI_NN.variation(True)
+            
             self.model_list=[]
 
         elif self.mode == MODE_PLAYER_VS_AI:
@@ -569,8 +596,9 @@ class Game():
             self.player = Player_bird(self, self.Born_location[0], self.Born_location[0])
 
             AI_bird(self, self.Born_location[0], self.Born_location[0])
-            if os.path.exists('AI_bird_model.txt'):
-                with open('AI_bird_model.txt', "rb") as fp:  # Unpickling
+            model_path = resource_path('AI_bird_model.txt')
+            if os.path.exists(model_path):
+                with open(model_path, "rb") as fp:  # Unpickling
                     self.AI_bird_group.sprites()[-1].AI_NN = pickle.load(fp)
 
         self.run()
@@ -624,7 +652,7 @@ class Game():
                 self.new()
             elif self.iteration_time==0  and len(self.AI_bird_group.sprites())==0:
                 self.model_list = generate_new_model(self.model_list, max(self.iteration_time-100,1), self.AI_birds_num)
-                with open('AI_bird_model.txt', "wb") as fp:  # Pickling
+                with open(resource_path('AI_bird_model.txt'), "wb") as fp:  # Pickling
                     pickle.dump(self.model_list[-1], fp)
                 print('AI_bird model saved! ')
                 pygame.mixer.music.stop()
@@ -632,7 +660,7 @@ class Game():
                 self.GameOverSound.play()
                 self.playing = False
             elif self.score>=70:
-                with open('AI_bird_model.txt', "wb") as fp:  # Pickling
+                with open(resource_path('AI_bird_model.txt'), "wb") as fp:  # Pickling
                     pickle.dump(self.AI_bird_group.sprites()[-1].AI_NN, fp)
                 print('AI_bird model saved! ')
                 self.GameOverSound.play()
