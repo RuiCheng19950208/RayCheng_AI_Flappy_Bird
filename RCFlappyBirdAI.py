@@ -414,12 +414,12 @@ class Pipe_top(pygame.sprite.Sprite):
     def update(self):
         self.rect.x -= self.vel * self.game.time_scale
         if self.game.mode in [0,2]:
-            if self.rect.x+60<= self.game.player.x and self.passed ==False:
+            if self.rect.x+120<= self.game.player.x and self.passed ==False:
                 self.passed =True
                 self.game.random_next_pipe_heigh = random.randrange(height-150, height+150)
                 self.add_pipe()
         elif self.game.mode==1:
-            if self.rect.x+60 <= self.game.AI_bird_group.sprites()[-1].x and self.passed == False:
+            if self.rect.x+120 <= self.game.AI_bird_group.sprites()[-1].x and self.passed == False:
                 self.passed = True
                 self.game.random_next_pipe_heigh = random.randrange(height - 150, height + 150)
                 self.add_pipe()
@@ -679,19 +679,47 @@ class Game():
                 self.running = False
             if pygame.key.get_pressed()[pygame.K_RIGHT]:
                 if self.playing:
+                    # Store old time scale for velocity adjustment
+                    old_time_scale = self.time_scale
+                    
                     # Allow speed control in all modes
                     self.time_scale_index = min(self.time_scale_index+1, len(self.time_scale_list)-1)
                     self.time_scale = self.time_scale_list[self.time_scale_index]
+                    
+                    # Adjust bird velocities based on time scale change
+                    self.adjust_velocities(old_time_scale)
+                    
                     print('Time scale: x' + str(self.time_scale))
 
             if pygame.key.get_pressed()[pygame.K_LEFT]:
                 if self.playing:
+                    # Store old time scale for velocity adjustment
+                    old_time_scale = self.time_scale
+                    
                     # Allow speed control in all modes
                     self.time_scale_index = max(self.time_scale_index-1, 0)
                     self.time_scale = self.time_scale_list[self.time_scale_index]
+                    
+                    # Adjust bird velocities based on time scale change
+                    self.adjust_velocities(old_time_scale)
+                    
                     print('Time scale: x' + str(self.time_scale))
-
-
+    
+    def adjust_velocities(self, old_time_scale):
+        """Adjust bird velocities when time scale changes"""
+        if old_time_scale == 0:  # Prevent division by zero
+            return
+            
+        # Calculate the scale factor for velocity adjustment
+        scale_factor = self.time_scale / old_time_scale
+        
+        # Adjust player bird velocity if it exists
+        if hasattr(self, 'player') and self.player in self.player_bird_group:
+            self.player.vel *= scale_factor
+            
+        # Adjust all AI bird velocities
+        for bird in self.AI_bird_group:
+            bird.vel *= scale_factor
 
     def draw(self):
 
